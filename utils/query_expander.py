@@ -26,7 +26,7 @@ def load_law_terms_dictionary(file_path=None):
 
 
 def generate_similar_questions(client, user_query, law_terms):
-    """Gemini 2.0 Flash를 사용하여 유사질문 3개 생성"""
+    """Gemini 2.5 Flash를 사용하여 유사질문 3개 생성"""
     # 용어 목록을 문자열로 변환 (너무 길면 일부만 사용)
     terms_str = ", ".join(law_terms[:200])  # 처음 200개만 사용하여 프롬프트 크기 제한
 
@@ -106,7 +106,7 @@ def generate_similar_questions(client, user_query, law_terms):
 
 
 def extract_key_terms(client, user_query, law_terms):
-    """Gemini 2.0 Flash를 사용하여 핵심어 5개 이내 추출"""
+    """Gemini 2.5 Flash를 사용하여 핵심어 5개 이내 추출"""
     terms_str = ", ".join(law_terms)
 
     prompt = f"""# 역할

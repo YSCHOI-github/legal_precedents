@@ -216,26 +216,25 @@ def run_parallel_agents(client, court_cases, tax_cases, preprocessed_data, user_
         }
 
 
-def prepare_head_agent_input(agent_responses, max_tokens=200000):
-    """Head Agent 입력 토큰 수 관리 - 초과 시 마지막 에이전트 응답 truncate"""
-    # 간단한 토큰 추정: 한글 1자 약 2.5 토큰
+def prepare_head_agent_input(agent_responses, max_tokens=150000):
+    """Head Agent 입력 토큰 수 관리 - 초과 시 모든 에이전트 응답에 균등 truncate"""
+    # 토큰 추정: 한글 1자 약 3.5 토큰 (마크다운/JSON 오버헤드 포함 안전 마진 확보)
     total_chars = sum(len(resp['response']) for resp in agent_responses)
-    estimated_tokens = total_chars * 2.5
+    estimated_tokens = total_chars * 3.5
 
     logging.info(f"Head Agent 입력 예상 토큰: {int(estimated_tokens):,} (최대: {max_tokens:,})")
 
     if estimated_tokens > max_tokens:
-        # 초과 토큰 계산
-        excess_tokens = estimated_tokens - max_tokens
-        reduction_chars = int(excess_tokens / 2.5)
+        # 목표 총 문자 수 계산 후 에이전트 수로 균등 분배
+        target_chars = int(max_tokens / 3.5)
+        chars_per_agent = target_chars // len(agent_responses)
 
-        # Agent 6 (마지막) 응답만 truncate
-        original_length = len(agent_responses[-1]['response'])
-        truncated_length = max(1000, original_length - reduction_chars)  # 최소 1000자 보장
-
-        agent_responses[-1]['response'] = agent_responses[-1]['response'][:truncated_length]
-
-        logging.warning(f"Agent 6 응답 truncate: {original_length:,}자 -> {truncated_length:,}자")
+        for resp in agent_responses:
+            original_length = len(resp['response'])
+            if original_length > chars_per_agent:
+                truncated_length = max(1000, chars_per_agent)  # 최소 1000자 보장
+                resp['response'] = resp['response'][:truncated_length]
+                logging.warning(f"{resp['agent']} 응답 truncate: {original_length:,}자 -> {truncated_length:,}자")
 
     return agent_responses
 
@@ -243,7 +242,7 @@ def prepare_head_agent_input(agent_responses, max_tokens=200000):
 def run_head_agent(client, agent_responses, user_query, conversation_history=""):
     """각 에이전트의 응답을 통합하여 최종 응답 생성"""
     # 토큰 관리 (입력 용량 초과 방지)
-    agent_responses = prepare_head_agent_input(agent_responses, max_tokens=200000)
+    agent_responses = prepare_head_agent_input(agent_responses, max_tokens=150000)
 
     # 응답 데이터 준비
     responses_str = ""
